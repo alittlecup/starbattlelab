@@ -19,6 +19,9 @@ class TestT2(unittest.TestCase):
         st = CandidateState(region, stars=1)
         d = region_confined_to_line(st)
         self.assertIsNotNone(d)
+        self.assertEqual(d.meta["axis"], "row")
+        self.assertEqual(d.meta["count"], 2)
+        self.assertIn("contiguous", d.meta)
         marked = {(r, c) for (r, c, s) in d.marks}
         self.assertIn((0, 2), marked)
         self.assertIn((0, 3), marked)

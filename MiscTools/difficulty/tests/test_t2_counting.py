@@ -19,6 +19,8 @@ class TestT2Counting(unittest.TestCase):
         st = CandidateState(region, stars=1)
         d = undercounting(st)
         self.assertIsNotNone(d)
+        self.assertEqual(d.meta["k"], 2)
+        self.assertIn(d.meta["axis"], ("row", "col"))
         marked = {(r, c) for (r, c, s) in d.marks}
         self.assertIn((0, 3), marked)
         self.assertIn((1, 3), marked)

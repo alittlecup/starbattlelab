@@ -11,6 +11,8 @@
 import json
 import os
 
+from factors import complexity
+
 # rule_id -> 类别（仅用于 band 名称展示）
 RULE_CATEGORY = {
     "row_col_complete": "basic", "adjacency": "basic", "region_complete": "basic",
@@ -33,17 +35,18 @@ def load_config(path=None):
         return json.load(f)
 
 
-def _rule_value(config, rule_id):
-    """规则在难度轴上的代表值 = 区间中点；未配置则返回 None。"""
+def _rule_value(config, rule_id, meta):
+    """规则在难度轴上的具体值 = lo + complexity(因子) × (hi − lo)；未配置则返回 None。"""
     r = config.get("rules", {}).get(rule_id)
     if not r:
         return None
-    return (r["lo"] + r["hi"]) / 2.0
+    return r["lo"] + complexity(rule_id, meta) * (r["hi"] - r["lo"])
 
 
 def score_trace(trace, config):
     """对一条解题轨迹评分。
 
+    某步难度 = 其规则区间内、由因子定位的具体值；谜题难度 = 最难一步。
     返回 {band, score, hardest_rule, steps}。
     """
     max_dif = config.get("maxDifficulty", 1000)
@@ -51,14 +54,17 @@ def score_trace(trace, config):
         return {"band": UNSOLVED_BAND, "score": float(max_dif) + 1.0,
                 "hardest_rule": None, "steps": len(trace.steps)}
 
-    best_value = 0.0
+    best_value = -1.0
     best_rule = None
     for s in trace.steps:
         rid = getattr(s, "rule_id", None) or s.technique_name
-        v = _rule_value(config, rid)
+        meta = getattr(s, "meta", {}) or {}
+        v = _rule_value(config, rid, meta)
         if v is not None and v >= best_value:
             best_value = v
             best_rule = rid
+    if best_value < 0:
+        best_value = 0.0
 
     cat = RULE_CATEGORY.get(best_rule, "geo")
     return {"band": CATEGORY_BAND.get(cat, "Medium"), "score": best_value,

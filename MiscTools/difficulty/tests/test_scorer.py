@@ -17,33 +17,46 @@ CONFIG = {
 }
 
 
-def step(rule_id, tier):
-    return Step("name", tier, [(0, 0, 1)], "r", rule_id=rule_id)
+def step(rule_id, meta=None):
+    return Step("name", 1, [(0, 0, 1)], "r", rule_id=rule_id, meta=meta or {})
+
+
+def sc(steps):
+    return score_trace(Trace(steps=steps, solved=True), CONFIG)
 
 
 class TestScorer(unittest.TestCase):
     def test_unsolved_is_expert(self):
-        t = Trace(steps=[step("row_col_complete", 1)], solved=False, stuck_state=object())
+        t = Trace(steps=[step("region_confined")], solved=False, stuck_state=object())
         r = score_trace(t, CONFIG)
         self.assertEqual(r["band"], "Expert")
         self.assertGreater(r["score"], CONFIG["maxDifficulty"])
 
-    def test_score_is_midpoint_of_hardest_rule(self):
-        t = Trace(steps=[step("row_col_complete", 1), step("region_confined", 6)], solved=True)
-        r = score_trace(t, CONFIG)
-        self.assertEqual(r["hardest_rule"], "region_confined")
-        self.assertEqual(r["score"], (40 + 250) / 2.0)
+    def test_factor_maps_to_interval_bounds(self):
+        easy = sc([step("region_confined", {"contiguous": True, "count": 2})])
+        hard = sc([step("region_confined", {"contiguous": False, "count": 7})])
+        self.assertAlmostEqual(easy["score"], 40)    # lo
+        self.assertAlmostEqual(hard["score"], 250)   # hi
 
-    def test_harder_rule_scores_higher(self):
-        t1 = Trace(steps=[step("region_confined", 6)], solved=True)
-        t2 = Trace(steps=[step("exclusion", 7)], solved=True)
-        self.assertLess(score_trace(t1, CONFIG)["score"], score_trace(t2, CONFIG)["score"])
+    def test_count_increases_difficulty_within_half(self):
+        a = sc([step("region_confined", {"contiguous": True, "count": 2})])
+        b = sc([step("region_confined", {"contiguous": True, "count": 5})])
+        self.assertLess(a["score"], b["score"])
+
+    def test_noncontiguous_harder_than_contiguous(self):
+        c = sc([step("region_confined", {"contiguous": True, "count": 2})])
+        nc = sc([step("region_confined", {"contiguous": False, "count": 2})])
+        self.assertLess(c["score"], nc["score"])
+
+    def test_hardest_step_wins(self):
+        t = sc([step("region_confined", {"contiguous": True, "count": 2}),
+                step("exclusion", {"candidate_count": 7})])
+        self.assertEqual(t["hardest_rule"], "exclusion")
+        self.assertAlmostEqual(t["score"], 300)
 
     def test_band_from_category(self):
-        t = Trace(steps=[step("row_col_complete", 1)], solved=True)
-        self.assertEqual(score_trace(t, CONFIG)["band"], "Easy")
-        t2 = Trace(steps=[step("region_confined", 6)], solved=True)
-        self.assertEqual(score_trace(t2, CONFIG)["band"], "Medium")
+        self.assertEqual(sc([step("row_col_complete")])["band"], "Easy")
+        self.assertEqual(sc([step("region_confined", {"contiguous": True, "count": 2})])["band"], "Medium")
 
 
 if __name__ == "__main__":
