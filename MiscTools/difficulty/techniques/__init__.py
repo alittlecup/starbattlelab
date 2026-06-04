@@ -1,5 +1,6 @@
 # techniques package
 from techniques.t1_basic import adjacency_elimination, unit_complete, last_cell
+from techniques.t2_geometry import region_confined_to_line, exclusion
 
 
 def _tag(fn, tier):
@@ -12,4 +13,6 @@ ALL_TECHNIQUES = [
     _tag(adjacency_elimination, 1),
     _tag(unit_complete, 1),
     _tag(last_cell, 1),
+    _tag(region_confined_to_line, 2),
+    _tag(exclusion, 2),
 ]
