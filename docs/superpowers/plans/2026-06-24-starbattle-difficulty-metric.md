@@ -835,25 +835,18 @@ class TestT2(unittest.TestCase):
         self.assertNotIn((0, 1), marked)
 
     def test_exclusion_kills_dominating_cell(self):
-        # 3x3：区域 2 的候选格全部是 (1,1) 的邻格 -> (1,1) 必须清除
+        # 3x3：区域 2 = {(0,2),(1,2)}，二者的公共邻格 {(0,1),(1,1)} 若放星会害死区域 2
         region = [
-            [1, 2, 1],
-            [1, 2, 1],
-            [1, 1, 1],
+            [1, 1, 2],
+            [1, 1, 2],
+            [3, 3, 3],
         ]
-        st = CandidateState(region, stars=1)
-        # 区域 2 的格 (0,1)(1,1) ... 让区域 2 仅 (0,1) 为候选，且 (0,1) 是 (1,1) 邻格
-        st.set_cell(1, 1, UNKNOWN)
-        # 把区域 2 中除 (0,1) 外的格清除，使其唯一候选 (0,1)，它是 (1,1) 的邻格
-        st.set_cell(1, 1, ELIMINATED) if False else None
-        # 区域 2 单元格：找出并清除除 (0,1) 外
-        for (r, c) in st.cells_of_region(2):
-            if (r, c) != (0, 1):
-                st.set_cell(r, c, ELIMINATED)
+        st = CandidateState(region, stars=1)  # 全 UNKNOWN
         d = exclusion(st)
         self.assertIsNotNone(d)
         marked = {(r, c) for (r, c, s) in d.marks}
-        # (1,1) 是 (0,1) 唯一候选的邻格 -> 应被清除
+        # 区域 2 的两个候选 (0,2)(1,2) 的公共邻格 -> 应被清除
+        self.assertIn((0, 1), marked)
         self.assertIn((1, 1), marked)
 
     def test_techniques_return_none_when_inapplicable(self):
