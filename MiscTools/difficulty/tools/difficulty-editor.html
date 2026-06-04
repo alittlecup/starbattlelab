@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Star Battle 难度规则编辑器</title>
+<style>
+  :root {
+    --basic: #2e9e5b;   /* 绿 基础 */
+    --geo:   #2b7fd0;   /* 蓝 几何/计数 */
+    --adv:   #e08a1e;   /* 橙 高级 */
+    --uniq:  #d0473f;   /* 红 唯一性 */
+    --bg: #f6f7f9; --panel:#fff; --line:#dfe3e8; --ink:#222; --muted:#777;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+         background:var(--bg); color:var(--ink); font-size:14px; }
+  header { background:var(--panel); border-bottom:1px solid var(--line); padding:12px 18px;
+           display:flex; align-items:center; gap:18px; flex-wrap:wrap; position:sticky; top:0; z-index:5; }
+  header h1 { font-size:16px; margin:0; }
+  header .ctl { display:flex; align-items:center; gap:6px; }
+  header input[type=number] { width:84px; padding:4px 6px; border:1px solid var(--line); border-radius:5px; }
+  button { padding:5px 12px; border:1px solid var(--line); background:#fff; border-radius:6px; cursor:pointer; font-size:13px; }
+  button:hover { background:#eef2f6; }
+  button.primary { background:#2b7fd0; color:#fff; border-color:#2b7fd0; }
+  button.primary:hover { background:#2569ad; }
+  .legend { display:flex; gap:14px; margin-left:auto; font-size:12px; color:var(--muted); }
+  .legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:middle; }
+  .lg-basic::before{background:var(--basic);} .lg-geo::before{background:var(--geo);}
+  .lg-adv::before{background:var(--adv);} .lg-uniq::before{background:var(--uniq);}
+
+  main { padding:16px 18px 320px; }
+  /* 轴刻度 */
+  .axis { display:grid; grid-template-columns: 200px 1fr 90px; align-items:end; margin-bottom:4px; }
+  .axis .track { position:relative; height:22px; }
+  .axis .tick { position:absolute; transform:translateX(-50%); font-size:11px; color:var(--muted); bottom:0; }
+  .axis .tick::after { content:""; position:absolute; left:50%; top:16px; width:1px; height:6px; background:var(--line); }
+
+  .rows { background:var(--panel); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .row { display:grid; grid-template-columns:200px 1fr 90px; align-items:center; height:34px;
+         border-bottom:1px solid #f0f2f4; }
+  .row:last-child { border-bottom:none; }
+  .row.sel { background:#eaf3fc; }
+  .row .label { padding-left:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
+  .row .label .num { display:inline-block; width:22px; color:var(--muted); }
+  .row .val { text-align:right; padding-right:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+
+  .track { position:relative; height:34px; }
+  .gridline { position:absolute; top:0; bottom:0; width:1px; background:#f0f2f4; }
+  .bar { position:absolute; top:7px; height:20px; border-radius:4px; cursor:grab; opacity:.85;
+         display:flex; align-items:center; justify-content:center; color:#fff; font-size:11px; user-select:none; }
+  .bar:active { cursor:grabbing; }
+  .bar .handle { position:absolute; top:0; width:8px; height:100%; cursor:ew-resize; }
+  .bar .handle.l { left:-1px; } .bar .handle.r { right:-1px; }
+  .bar.cat-basic{background:var(--basic);} .bar.cat-geo{background:var(--geo);}
+  .bar.cat-adv{background:var(--adv);} .bar.cat-uniq{background:var(--uniq);}
+  .bar.sel { outline:2px solid #1b3a5b; opacity:1; }
+  .expert { position:absolute; top:0; bottom:0; width:2px; background:#d0473f; }
+  .expert-lbl { position:absolute; top:-2px; font-size:10px; color:#d0473f; transform:translateX(4px); }
+
+  /* 底部精调面板 */
+  .detail { position:fixed; bottom:0; left:0; right:0; background:var(--panel); border-top:1px solid var(--line);
+            padding:14px 18px; box-shadow:0 -2px 10px rgba(0,0,0,.06); }
+  .detail h2 { margin:0 0 4px; font-size:15px; }
+  .detail .cat-tag { font-size:11px; padding:1px 8px; border-radius:10px; color:#fff; margin-left:8px; vertical-align:middle; }
+  .detail .meaning { color:#555; margin:6px 0; }
+  .detail .factor { color:var(--muted); font-size:13px; margin-bottom:10px; }
+  .sliders { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  .sliders .field { display:flex; align-items:center; gap:6px; }
+  .sliders input[type=number]{ width:80px; padding:4px 6px; border:1px solid var(--line); border-radius:5px; }
+  .sliders input[type=range]{ width:260px; }
+  .hint { color:var(--muted); font-size:12px; margin-top:8px; }
+  textarea { width:100%; height:120px; font-family:monospace; font-size:12px; margin-top:8px; border:1px solid var(--line); border-radius:6px; padding:8px; display:none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Star Battle 难度规则编辑器</h1>
+  <div class="ctl">最大难度 MAX <input id="maxInput" type="number" min="10" step="10" value="1000"></div>
+  <button id="resetBtn">重置默认</button>
+  <button id="exportBtn" class="primary">导出 JSON</button>
+  <button id="importBtn">导入 JSON</button>
+  <div class="legend">
+    <span class="lg-basic">基础</span><span class="lg-geo">几何/计数</span>
+    <span class="lg-adv">高级</span><span class="lg-uniq">唯一性</span>
+  </div>
+</header>
+
+<main>
+  <div class="axis"><div></div><div class="track" id="axisTrack"></div><div></div></div>
+  <div class="rows" id="rows"></div>
+  <textarea id="jsonBox" placeholder="在此粘贴 JSON 后点“导入 JSON”应用；导出时这里会显示当前配置。"></textarea>
+</main>
+
+<div class="detail" id="detail">
+  <h2 id="dTitle">点击上方任一规则进行精调</h2>
+  <div class="meaning" id="dMeaning"></div>
+  <div class="factor" id="dFactor"></div>
+  <div class="sliders" id="dSliders" style="display:none">
+    <div class="field">下限 lo <input type="number" id="dLoNum"></div>
+    <input type="range" id="dLoRange">
+    <div class="field">上限 hi <input type="number" id="dHiNum"></div>
+    <input type="range" id="dHiRange">
+  </div>
+  <div class="hint">操作：拖横条中间=平移位置；拖横条左/右边缘=改下限/上限；点行或横条=选中并在此精调。区间允许重叠。</div>
+</div>
+
+<script>
+// ---- 规则定义（默认区间为占位，铺开在 0–1000，全部可调） ----
+const DEFAULT_MAX = 1000;
+function defaultRules() {
+  return [
+    {id:'row_col_complete', n:1,  name:'行/列已满',         cat:'basic', lo:0,   hi:60,
+     meaning:'某行/列已满星 → 其余格打叉（反向·线）。', factor:'区间内因子：近似定值。'},
+    {id:'adjacency',        n:2,  name:'邻接打叉',           cat:'basic', lo:40,  hi:100,
+     meaning:'任意星的 8 邻格不能再有星 → 打叉。', factor:'区间内因子：固定形状，近似定值。'},
+    {id:'region_complete',  n:3,  name:'区域已满',           cat:'basic', lo:80,  hi:160,
+     meaning:'某区域已满星 → 其余格打叉（反向·区域）。', factor:'区间内因子：区域格子数量（待定）。'},
+    {id:'row_col_last',     n:4,  name:'行/列唯一空格',      cat:'basic', lo:130, hi:220,
+     meaning:'某行/列只剩一个空格 → 必是星（正向·线）。', factor:'区间内因子：近似定值。'},
+    {id:'region_last',      n:5,  name:'区域唯一空格',       cat:'basic', lo:190, hi:300,
+     meaning:'某区域只剩一个空格 → 必是星（正向·区域）。', factor:'区间内因子：近似定值。'},
+    {id:'region_confined',  n:6,  name:'区域限行/列',        cat:'geo',   lo:280, hi:460,
+     meaning:'区域候选全在一行/列 → 该线其余格打叉。', factor:'区间内因子：① 是否相连（主）② 候选数量（次）。'},
+    {id:'exclusion',        n:7,  name:'排除',               cat:'geo',   lo:420, hi:600,
+     meaning:'在某格放星会害死某区域 → 该格打叉（一步推理）。', factor:'区间内因子：① 被威胁区域候选数量 ② 分布紧凑度。'},
+    {id:'undercounting',    n:8,  name:'欠计数',             cat:'geo',   lo:540, hi:700,
+     meaning:'k 个区域候选落在 k 条线内 → 这些线其它区域的格打叉。', factor:'区间内因子：① k 值（越大越难）② 行/列。'},
+    {id:'overcounting',     n:9,  name:'过计数',             cat:'geo',   lo:560, hi:720,
+     meaning:'k 条线候选落在 k 个区域内 → 这些区域不在线上的格打叉。', factor:'区间内因子：① k 值 ② 行/列。'},
+    {id:'pressured_excl',   n:10, name:'受压排除',           cat:'adv',   lo:640, hi:780,
+     meaning:'排除的强化：把已放星 / 1×n 区域的压力一起算入。', factor:'区间内因子：① 同排除 ② 纳入的压力源数量。'},
+    {id:'finned_counts',    n:11, name:'带鳍计数',           cat:'adv',   lo:700, hi:820,
+     meaning:'差一格（鳍）的欠/过计数；取两种情况打叉的交集。', factor:'区间内因子：① k 值 + 行/列 ② 鳍的复杂度。'},
+    {id:'set_diff',         n:12, name:'集合差分',           cat:'adv',   lo:740, hi:860,
+     meaning:'对行/列/区域集合做加减，推出残余区块的确切星数。', factor:'区间内因子：① 参与集合数量 ② 残余是否简单。'},
+    {id:'fish',             n:13, name:'鱼 (Fish)',          cat:'adv',   lo:760, hi:880,
+     meaning:'n 列星锁在同 n 行内 → 这 n 行非这 n 列的格打叉。', factor:'区间内因子：① 鱼规模 n ② 行/列方向。'},
+    {id:'finned_fish',      n:14, name:'带鳍鱼',             cat:'adv',   lo:800, hi:910,
+     meaning:'差一格（鳍）的鱼；取干净鱼打叉 ∩ 鳍邻格。', factor:'区间内因子：① 规模 n ② 行/列 ③ 鳍复杂度。'},
+    {id:'by_a_thread',      n:15, name:'By a Thread',        cat:'uniq',  lo:860, hi:940,
+     meaning:'唯一性：解吊在一根“线”（一个格）上 → 强制确定。', factor:'区间内因子：① 涉及格/区域数 ② 论证链长。'},
+    {id:'at_sea',           n:16, name:'At Sea',             cat:'uniq',  lo:890, hi:970,
+     meaning:'唯一性：多个欠定区域被逼对齐，否则多解。', factor:'区间内因子：① 涉及格/区域数 ② 链长 ③ 海域规模。'},
+    {id:'thread_at_sea',    n:17, name:'By a Thread at Sea', cat:'uniq',  lo:920, hi:1000,
+     meaning:'15+16 叠加，唯一性论证链最长，最难。', factor:'区间内因子：综合 15/16，论证链最长。'},
+  ];
+}
+const CAT_COLOR = {basic:'var(--basic)', geo:'var(--geo)', adv:'var(--adv)', uniq:'var(--uniq)'};
+const CAT_NAME  = {basic:'基础', geo:'几何/计数', adv:'高级', uniq:'唯一性'};
+const STORE_KEY = 'sb-difficulty-config-v1';
+
+let MAX = DEFAULT_MAX;
+let rules = defaultRules();
+let selected = null;
+
+// ---- 持久化 ----
+function save() {
+  localStorage.setItem(STORE_KEY, JSON.stringify(serialize()));
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return;
+    const cfg = JSON.parse(raw);
+    applyConfig(cfg);
+  } catch(e) { /* ignore */ }
+}
+function serialize() {
+  const out = { maxDifficulty: MAX, rules: {} };
+  rules.forEach(r => out.rules[r.id] = { lo: r.lo, hi: r.hi });
+  return out;
+}
+function applyConfig(cfg) {
+  if (cfg.maxDifficulty) MAX = +cfg.maxDifficulty;
+  if (cfg.rules) rules.forEach(r => {
+    if (cfg.rules[r.id]) { r.lo = +cfg.rules[r.id].lo; r.hi = +cfg.rules[r.id].hi; }
+  });
+  document.getElementById('maxInput').value = MAX;
+}
+
+// ---- 渲染 ----
+function pct(v) { return (v / MAX * 100) + '%'; }
+function renderAxis() {
+  const t = document.getElementById('axisTrack');
+  t.innerHTML = '';
+  const steps = 10;
+  for (let i = 0; i <= steps; i++) {
+    const v = Math.round(MAX * i / steps);
+    const d = document.createElement('div');
+    d.className = 'tick'; d.style.left = pct(v); d.textContent = v;
+    t.appendChild(d);
+  }
+}
+function renderRows() {
+  const c = document.getElementById('rows');
+  c.innerHTML = '';
+  rules.forEach(r => {
+    const row = document.createElement('div');
+    row.className = 'row' + (selected === r ? ' sel' : '');
+    row.dataset.id = r.id;
+
+    const label = document.createElement('div');
+    label.className = 'label';
+    label.innerHTML = '<span class="num">' + r.n + '</span>' + r.name;
+    label.onclick = () => select(r);
+
+    const track = document.createElement('div');
+    track.className = 'track';
+    // 背景网格线
+    for (let i = 1; i < 10; i++) {
+      const g = document.createElement('div'); g.className = 'gridline'; g.style.left = (i*10)+'%'; track.appendChild(g);
+    }
+    const bar = document.createElement('div');
+    bar.className = 'bar cat-' + r.cat + (selected === r ? ' sel' : '');
+    bar.style.left = pct(r.lo);
+    bar.style.width = pct(r.hi - r.lo);
+    bar.textContent = (r.hi - r.lo >= MAX*0.06) ? (r.lo + '–' + r.hi) : '';
+    bar.innerHTML += '<div class="handle l"></div><div class="handle r"></div>';
+    attachDrag(bar, track, r);
+    track.appendChild(bar);
+
+    const val = document.createElement('div');
+    val.className = 'val'; val.textContent = r.lo + '–' + r.hi;
+
+    row.appendChild(label); row.appendChild(track); row.appendChild(val);
+    c.appendChild(row);
+  });
+}
+function renderAll() { renderAxis(); renderRows(); }
+
+// ---- 拖拽 ----
+function attachDrag(bar, track, r) {
+  let mode = null, startX = 0, startLo = 0, startHi = 0, trackW = 1;
+  function down(e, m) {
+    e.preventDefault(); e.stopPropagation();
+    mode = m; startX = e.clientX; startLo = r.lo; startHi = r.hi;
+    trackW = track.getBoundingClientRect().width;
+    select(r);
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  }
+  function move(e) {
+    const dv = Math.round((e.clientX - startX) / trackW * MAX);
+    if (mode === 'move') {
+      const w = startHi - startLo;
+      let lo = Math.min(Math.max(0, startLo + dv), MAX - w);
+      r.lo = lo; r.hi = lo + w;
+    } else if (mode === 'l') {
+      r.lo = Math.min(Math.max(0, startLo + dv), r.hi - 1);
+    } else if (mode === 'r') {
+      r.hi = Math.max(Math.min(MAX, startHi + dv), r.lo + 1);
+    }
+    renderRows(); syncDetail();
+  }
+  function up() {
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', up);
+    save();
+  }
+  bar.addEventListener('pointerdown', e => {
+    if (e.target.classList.contains('handle')) return;
+    down(e, 'move');
+  });
+  bar.querySelector('.handle.l').addEventListener('pointerdown', e => down(e, 'l'));
+  bar.querySelector('.handle.r').addEventListener('pointerdown', e => down(e, 'r'));
+}
+
+// ---- 精调面板 ----
+function select(r) {
+  selected = r; renderRows(); syncDetail();
+}
+function syncDetail() {
+  const r = selected; if (!r) return;
+  document.getElementById('dSliders').style.display = 'flex';
+  document.getElementById('dTitle').innerHTML =
+    '规则 ' + r.n + '：' + r.name +
+    '<span class="cat-tag" style="background:' + CAT_COLOR[r.cat] + '">' + CAT_NAME[r.cat] + '</span>';
+  document.getElementById('dMeaning').textContent = r.meaning;
+  document.getElementById('dFactor').textContent = r.factor;
+  const loN=document.getElementById('dLoNum'), hiN=document.getElementById('dHiNum');
+  const loR=document.getElementById('dLoRange'), hiR=document.getElementById('dHiRange');
+  [loR,hiR].forEach(s=>{s.min=0;s.max=MAX;s.step=1;});
+  loN.value=r.lo; hiN.value=r.hi; loR.value=r.lo; hiR.value=r.hi;
+  loN.max=MAX; hiN.max=MAX; loN.min=0; hiN.min=0;
+}
+function bindDetail() {
+  const loN=document.getElementById('dLoNum'), hiN=document.getElementById('dHiNum');
+  const loR=document.getElementById('dLoRange'), hiR=document.getElementById('dHiRange');
+  function setLo(v){ if(!selected)return; selected.lo=Math.min(Math.max(0,Math.round(+v)),selected.hi-1); commit(); }
+  function setHi(v){ if(!selected)return; selected.hi=Math.max(Math.min(MAX,Math.round(+v)),selected.lo+1); commit(); }
+  function commit(){ renderRows(); syncDetail(); save(); }
+  loN.oninput=e=>setLo(e.target.value); loR.oninput=e=>setLo(e.target.value);
+  hiN.oninput=e=>setHi(e.target.value); hiR.oninput=e=>setHi(e.target.value);
+}
+
+// ---- 顶部控制 ----
+document.getElementById('maxInput').addEventListener('change', e => {
+  const v = Math.max(10, Math.round(+e.target.value || DEFAULT_MAX));
+  MAX = v;
+  // 超出新 MAX 的区间夹紧
+  rules.forEach(r => { r.hi = Math.min(r.hi, MAX); r.lo = Math.min(r.lo, r.hi - 1); });
+  renderAll(); syncDetail(); save();
+});
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if (!confirm('恢复为默认区间和 MAX=1000？当前编辑会丢失。')) return;
+  MAX = DEFAULT_MAX; rules = defaultRules(); selected = null;
+  document.getElementById('maxInput').value = MAX;
+  document.getElementById('dSliders').style.display='none';
+  document.getElementById('dTitle').textContent='点击上方任一规则进行精调';
+  document.getElementById('dMeaning').textContent=''; document.getElementById('dFactor').textContent='';
+  renderAll(); save();
+});
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const box = document.getElementById('jsonBox');
+  box.style.display = 'block';
+  box.value = JSON.stringify(serialize(), null, 2);
+  box.select();
+});
+document.getElementById('importBtn').addEventListener('click', () => {
+  const box = document.getElementById('jsonBox');
+  if (box.style.display !== 'block') { box.style.display='block'; box.focus(); return; }
+  try {
+    applyConfig(JSON.parse(box.value));
+    renderAll(); syncDetail(); save();
+    alert('已导入。');
+  } catch(e) { alert('JSON 解析失败：' + e.message); }
+});
+
+// ---- 启动 ----
+load();
+bindDetail();
+renderAll();
+</script>
+</body>
+</html>
