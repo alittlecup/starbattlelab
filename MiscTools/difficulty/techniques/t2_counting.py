@@ -73,3 +73,8 @@ def overcounting(state):
         return None
     return Deduction("overcounting", TIER, marks,
                      "k 条线候选落在 k 个区域内，锁定这些区域的星于这些线")
+
+
+# 单一来源：技巧 tier 由本模块 TIER 决定。
+undercounting.tier = TIER
+overcounting.tier = TIER

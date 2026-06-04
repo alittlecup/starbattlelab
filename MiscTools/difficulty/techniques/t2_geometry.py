@@ -66,3 +66,8 @@ def exclusion(state):
         return None
     return Deduction("exclusion", TIER, marks,
                      "该格是某待放星区域全部候选的公共邻格，放星会害死该区域")
+
+
+# 单一来源：技巧 tier 由本模块 TIER 决定。
+region_confined_to_line.tier = TIER
+exclusion.tier = TIER

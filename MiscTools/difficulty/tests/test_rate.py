@@ -15,6 +15,8 @@ class TestRate(unittest.TestCase):
         self.assertIn("score", result)
         self.assertIn("solved", result)
         self.assertIn("steps", result)
+        # 该 5x5 题已知可纯逻辑解出——回归保护：若求解器退化会被此断言捕获
+        self.assertTrue(result["solved"])
 
     def test_analyze_invalid_sbn(self):
         result = analyze("garbage")

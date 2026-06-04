@@ -4,7 +4,7 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from candidate_state import CandidateState, STAR
+from candidate_state import CandidateState, STAR, is_complete_valid
 from techniques.t1_basic import adjacency_elimination, unit_complete, last_cell
 from engine import solve
 
@@ -22,6 +22,8 @@ class TestEngine(unittest.TestCase):
         self.assertTrue(trace.solved)
         self.assertEqual(st.grid[4][3], STAR)
         self.assertTrue(len(trace.steps) >= 1)
+        # solved 不仅是标志位——结果必须是一个真正合法的 Star Battle 解
+        self.assertTrue(is_complete_valid(st))
 
     def test_stuck_returns_unsolved_with_state(self):
         st = CandidateState(self._vertical_regions(5), stars=1)

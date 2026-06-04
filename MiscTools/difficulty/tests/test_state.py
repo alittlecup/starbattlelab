@@ -57,6 +57,14 @@ class TestCandidateState(unittest.TestCase):
         st.set_cell(0, 0, STAR)
         self.assertFalse(is_complete_valid(st))
 
+    def test_is_complete_valid_false_when_adjacent_stars(self):
+        # 每行/列/区域各 1 星，但对角线相邻 -> 必须判为非法
+        region = [[c + 1 for c in range(5)] for _ in range(5)]
+        st = CandidateState(region, stars=1)
+        for (r, c) in [(0, 0), (1, 1), (2, 2), (3, 3), (4, 4)]:
+            st.set_cell(r, c, STAR)
+        self.assertFalse(is_complete_valid(st))
+
 
 if __name__ == "__main__":
     unittest.main()

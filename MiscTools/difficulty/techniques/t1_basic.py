@@ -52,3 +52,9 @@ def last_cell(state):
         return None
     return Deduction("last_cell", TIER, marks,
                      "单元剩余空格数恰等于待放星数")
+
+
+# 单一来源：技巧的 tier 由本模块 TIER 决定，注册表与 Deduction 共用，避免不一致。
+adjacency_elimination.tier = TIER
+unit_complete.tier = TIER
+last_cell.tier = TIER
