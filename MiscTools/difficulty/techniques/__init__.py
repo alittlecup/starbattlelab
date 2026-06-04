@@ -1,17 +1,23 @@
 # techniques package
 #
-# 每个技巧函数在其所属模块里设置 .tier（来自模块 TIER 常量）——这是 tier 的单一来源，
-# 引擎排序与 Deduction 计分共用同一值。新增技巧：在对应模块设好 .tier，在此按 tier 升序登记即可。
-from techniques.t1_basic import adjacency_elimination, unit_complete, last_cell
+# 每个技巧函数在其所属模块里设置 .tier（引擎选用顺序）与 rule_id（难度配置键）。
+# 难度数值由计分器按 rule_id 查 difficulty-config.json 的区间得到，不再由 tier 决定。
+# 新增技巧：实现 find(state)->Deduction|None，设好 .tier 与 rule_id，在此按 tier 升序登记。
+from techniques.t1_basic import (
+    adjacency_elimination, line_complete, region_complete,
+    line_last_cell, region_last_cell,
+)
 from techniques.t2_geometry import region_confined_to_line, exclusion
 from techniques.t2_counting import undercounting, overcounting
 
 ALL_TECHNIQUES = [
-    adjacency_elimination,
-    unit_complete,
-    last_cell,
-    region_confined_to_line,
-    exclusion,
-    undercounting,
-    overcounting,
+    line_complete,            # tier 1
+    adjacency_elimination,    # tier 2
+    region_complete,          # tier 3
+    line_last_cell,           # tier 4
+    region_last_cell,         # tier 5
+    region_confined_to_line,  # tier 6
+    exclusion,                # tier 7
+    undercounting,            # tier 8
+    overcounting,             # tier 9
 ]

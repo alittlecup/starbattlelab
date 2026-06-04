@@ -6,7 +6,7 @@ from candidate_state import STAR, ELIMINATED
 from deduction import Deduction
 
 TIER = 2
-MAX_PIGEONHOLE = 3
+MAX_PIGEONHOLE = 7  # 正常棋盘最大 14×14，故 k 最大 7
 
 
 def _lines_of(unk, axis):
@@ -40,8 +40,9 @@ def undercounting(state):
                                 seen.add((r, c)); marks.append((r, c, ELIMINATED))
     if not marks:
         return None
-    return Deduction("undercounting", TIER, marks,
-                     "k 个区域候选落在 k 条线内，锁定这些线的星于这些区域")
+    return Deduction("undercounting", 8, marks,
+                     "k 个区域候选落在 k 条线内，锁定这些线的星于这些区域",
+                     rule_id="undercounting")
 
 
 def overcounting(state):
@@ -71,10 +72,11 @@ def overcounting(state):
                                 seen.add((r, c)); marks.append((r, c, ELIMINATED))
     if not marks:
         return None
-    return Deduction("overcounting", TIER, marks,
-                     "k 条线候选落在 k 个区域内，锁定这些区域的星于这些线")
+    return Deduction("overcounting", 9, marks,
+                     "k 条线候选落在 k 个区域内，锁定这些区域的星于这些线",
+                     rule_id="overcounting")
 
 
-# 单一来源：技巧 tier 由本模块 TIER 决定。
-undercounting.tier = TIER
-overcounting.tier = TIER
+# .tier = 引擎选用顺序
+undercounting.tier = 8
+overcounting.tier = 9

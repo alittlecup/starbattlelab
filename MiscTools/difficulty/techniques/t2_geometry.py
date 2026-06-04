@@ -39,8 +39,9 @@ def region_confined_to_line(state):
                     marks.append((r, c, ELIMINATED))
     if not marks:
         return None
-    return Deduction("region_confined_to_line", TIER, marks,
-                     "区域候选全在单行/列，锁定该行/列的星于此区域")
+    return Deduction("region_confined_to_line", 6, marks,
+                     "区域候选全在单行/列，锁定该行/列的星于此区域",
+                     rule_id="region_confined")
 
 
 def exclusion(state):
@@ -64,10 +65,11 @@ def exclusion(state):
                 marks.append((r, c, ELIMINATED))
     if not marks:
         return None
-    return Deduction("exclusion", TIER, marks,
-                     "该格是某待放星区域全部候选的公共邻格，放星会害死该区域")
+    return Deduction("exclusion", 7, marks,
+                     "该格是某待放星区域全部候选的公共邻格，放星会害死该区域",
+                     rule_id="exclusion")
 
 
-# 单一来源：技巧 tier 由本模块 TIER 决定。
-region_confined_to_line.tier = TIER
-exclusion.tier = TIER
+# .tier = 引擎选用顺序
+region_confined_to_line.tier = 6
+exclusion.tier = 7
