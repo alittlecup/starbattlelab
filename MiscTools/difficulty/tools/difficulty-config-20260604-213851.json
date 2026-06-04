@@ -1,0 +1,73 @@
+{
+  "maxDifficulty": 1000,
+  "rules": {
+    "row_col_complete": {
+      "lo": 1,
+      "hi": 10
+    },
+    "adjacency": {
+      "lo": 1,
+      "hi": 20
+    },
+    "region_complete": {
+      "lo": 1,
+      "hi": 30
+    },
+    "row_col_last": {
+      "lo": 1,
+      "hi": 30
+    },
+    "region_last": {
+      "lo": 1,
+      "hi": 30
+    },
+    "region_confined": {
+      "lo": 40,
+      "hi": 250
+    },
+    "exclusion": {
+      "lo": 100,
+      "hi": 300
+    },
+    "undercounting": {
+      "lo": 150,
+      "hi": 400
+    },
+    "overcounting": {
+      "lo": 200,
+      "hi": 500
+    },
+    "pressured_excl": {
+      "lo": 400,
+      "hi": 500
+    },
+    "finned_counts": {
+      "lo": 500,
+      "hi": 700
+    },
+    "set_diff": {
+      "lo": 600,
+      "hi": 800
+    },
+    "fish": {
+      "lo": 700,
+      "hi": 850
+    },
+    "finned_fish": {
+      "lo": 800,
+      "hi": 910
+    },
+    "by_a_thread": {
+      "lo": 860,
+      "hi": 940
+    },
+    "at_sea": {
+      "lo": 890,
+      "hi": 970
+    },
+    "thread_at_sea": {
+      "lo": 950,
+      "hi": 1000
+    }
+  }
+}

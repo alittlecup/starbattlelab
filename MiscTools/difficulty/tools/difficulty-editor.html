@@ -79,6 +79,7 @@
   <div class="ctl">最大难度 MAX <input id="maxInput" type="number" min="10" step="10" value="1000"></div>
   <button id="resetBtn">重置默认</button>
   <button id="exportBtn" class="primary">导出 JSON</button>
+  <button id="saveBtn">保存到文件</button>
   <button id="importBtn">导入 JSON</button>
   <div class="legend">
     <span class="lg-basic">基础</span><span class="lg-geo">几何/计数</span>
@@ -316,6 +317,38 @@ document.getElementById('exportBtn').addEventListener('click', () => {
   box.style.display = 'block';
   box.value = JSON.stringify(serialize(), null, 2);
   box.select();
+});
+function timestamp() {
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + p(d.getMonth()+1) + p(d.getDate()) + '-' +
+         p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
+}
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  const data = JSON.stringify(serialize(), null, 2);
+  const fname = 'difficulty-config-' + timestamp() + '.json';
+  // 优先用 File System Access API：可把文件保存到 html 同级目录（需在对话框里导航过去一次）
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: fname,
+        types: [{ description: 'JSON 配置', accept: { 'application/json': ['.json'] } }]
+      });
+      const w = await handle.createWritable();
+      await w.write(data); await w.close();
+      alert('已保存：' + fname);
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return;   // 用户取消
+      // 其它错误则回退到下载
+    }
+  }
+  // 回退：下载到浏览器默认下载目录（文件名带时间戳，不会重复）
+  const blob = new Blob([data], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = fname;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(a.href);
+  alert('已下载到浏览器下载目录：' + fname);
 });
 document.getElementById('importBtn').addEventListener('click', () => {
   const box = document.getElementById('jsonBox');
