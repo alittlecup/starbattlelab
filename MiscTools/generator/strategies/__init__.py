@@ -8,12 +8,14 @@ from .base import GenerationStrategy
 from .random_carve import RandomCarveStrategy
 from .progressive import ProgressiveStrategy
 from .shape import ShapeStrategy, TEMPLATES
+from .solution_first import SolutionFirstStrategy
 
 # 策略注册表：CLI 通过 --strategy <name> 选择。新增策略在此登记即可。
 # 注：曾试过 staircase（楼梯/带状），但带状区域几乎不产唯一解（6x6 起命中率→0），已移除。
 STRATEGIES = {
     'random': RandomCarveStrategy,
     'progressive': ProgressiveStrategy,
+    'solution': SolutionFirstStrategy,   # 思路 B：解先行，大尺寸高命中率
 }
 # 每个图案模板注册为一个 shape-<名字> 策略
 for _shape in TEMPLATES:
