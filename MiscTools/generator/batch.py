@@ -70,12 +70,9 @@ def run_size(size, stars, count, strategies, out_root, date_str,
     manifest_rows = []
     open_files = {}
 
-    def _persist(sbn):
+    def _persist(sbn, strat):
         d = decode_sbn(sbn)
         grid = d["region_grid"]
-        # 多策略混合时无法回溯具体策略，用 STRUCTURED 检测交给几何类目；
-        # 单策略时直接用该策略名。
-        strat = strategies[0] if len(strategies) == 1 else "mixed"
         cat = folder_category(grid, strat)
         cat_dir = os.path.join(size_dir, cat)
         if cat not in open_files:
