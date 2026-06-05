@@ -14,7 +14,25 @@ python3 -m pip install z3-solver tqdm Pillow
 > wheel 打包了错误的 arm64 二进制。若 `import z3` 报架构不匹配，改装 4.13.0.0：
 > `python3 -m pip install --force-reinstall --no-deps z3-solver==4.13.0.0`
 
-## 生成谜题
+## 一键生成 + 验证 + 可视化（推荐，按日期/尺寸归档）
+
+```bash
+# 尺寸 5-9，每个尺寸 10 个唯一解谜题，输出谜题 + 图片
+python3 -m MiscTools.generator.batch --sizes 5-9 --count 10
+```
+
+输出结构：
+
+```
+output/<YYYY-MM-DD>/<size>x<size>/
+    ├── puzzles.txt     # 该尺寸全部 SBN（每行一个，均为唯一解）
+    └── <SBN>.png       # 每个谜题对应的彩色区域图片
+```
+
+`batch` 参数同 `generate`，外加 `--out-root`（默认 `./output`）、`--date`（默认今天）、
+`--cell`（图片每格像素）。重复运行会读取已有 `puzzles.txt` 去重后续写。
+
+## 仅生成谜题（追加到 Main/puzzles/Files）
 
 ```bash
 # 尺寸 4-14，每个尺寸生成 50 个唯一解谜题

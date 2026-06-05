@@ -62,29 +62,24 @@ def load_existing(path):
         return {line.strip() for line in f if line.strip()}
 
 
-def generate_for_size(size, stars, count, strategy_name, out_dir,
-                      max_attempts, workers, base_seed):
-    """为单个尺寸生成 count 个唯一解谜题，增量追加写入文件。"""
-    if size not in DIM_TO_SBN_CODE_MAP:
-        print(f"[skip] size {size} 不在 SBN 支持范围 (5-25)", file=sys.stderr)
-        return 0
+def generate_unique(size, stars, count, strategy_name, max_attempts,
+                    workers, base_seed, seen=None, on_found=None):
+    """为单个尺寸生成至多 count 个唯一解谜题，返回新 SBN 列表。
 
-    path = os.path.join(out_dir, f"{size}-{stars}-unsorted.txt")
-    seen = load_existing(path)
-    found = 0
+    纯生成核心，不做文件 I/O —— 调用方负责持久化（generate.py 写 txt，
+    batch.py 写归档目录 + 渲染）。
+
+    :param set seen: 已知 SBN 集合（跨运行去重），会被原地更新。
+    :param callable on_found: 每产出一个新 SBN 时回调 on_found(sbn)，可用于流式写/渲染。
+    :returns: (新增 SBN 列表, 尝试次数)
+    """
+    seen = seen if seen is not None else set()
+    results = []
     attempts = 0
-    start = time.monotonic()
-
-    print(f"[{size}x{size} k={stars}] 目标 {count}，已有 {len(seen)}，"
-          f"策略={strategy_name}，workers={workers}")
-
-    os.makedirs(out_dir, exist_ok=True)
-    out = open(path, "a", encoding="utf-8")
     pool = mp.Pool(processes=workers)
     try:
         seed_counter = base_seed
-        while found < count and attempts < max_attempts:
-            # 每批投递一批任务，规模 = workers 的若干倍，平衡吞吐与停机响应。
+        while len(results) < count and attempts < max_attempts:
             batch = min(workers * 8, max_attempts - attempts)
             tasks = [(size, stars, strategy_name, seed_counter + i) for i in range(batch)]
             seed_counter += batch
@@ -92,21 +87,48 @@ def generate_for_size(size, stars, count, strategy_name, out_dir,
             for sbn in pool.imap_unordered(_attempt, tasks):
                 if sbn and sbn not in seen:
                     seen.add(sbn)
-                    out.write(sbn + "\n")
-                    out.flush()
-                    found += 1
-                    if found >= count:
+                    results.append(sbn)
+                    if on_found:
+                        on_found(sbn)
+                    if len(results) >= count:
                         break
     finally:
         pool.terminate()
         pool.join()
+    return results, attempts
+
+
+def generate_for_size(size, stars, count, strategy_name, out_dir,
+                      max_attempts, workers, base_seed):
+    """为单个尺寸生成 count 个唯一解谜题，增量追加写入 {size}-{stars}-unsorted.txt。"""
+    if size not in DIM_TO_SBN_CODE_MAP:
+        print(f"[skip] size {size} 不在 SBN 支持范围 (5-25)", file=sys.stderr)
+        return 0
+
+    path = os.path.join(out_dir, f"{size}-{stars}-unsorted.txt")
+    seen = load_existing(path)
+    start = time.monotonic()
+    print(f"[{size}x{size} k={stars}] 目标 {count}，已有 {len(seen)}，"
+          f"策略={strategy_name}，workers={workers}")
+
+    os.makedirs(out_dir, exist_ok=True)
+    out = open(path, "a", encoding="utf-8")
+    try:
+        def _write(sbn):
+            out.write(sbn + "\n")
+            out.flush()
+        results, attempts = generate_unique(
+            size, stars, count, strategy_name, max_attempts,
+            workers, base_seed, seen=seen, on_found=_write,
+        )
+    finally:
         out.close()
 
     elapsed = time.monotonic() - start
-    rate = (found / attempts * 100) if attempts else 0
-    print(f"[{size}x{size} k={stars}] 新增 {found} 个，尝试 {attempts} 次，"
+    rate = (len(results) / attempts * 100) if attempts else 0
+    print(f"[{size}x{size} k={stars}] 新增 {len(results)} 个，尝试 {attempts} 次，"
           f"命中率 {rate:.2f}%，耗时 {elapsed:.1f}s -> {path}")
-    return found
+    return len(results)
 
 
 def main(argv=None):
