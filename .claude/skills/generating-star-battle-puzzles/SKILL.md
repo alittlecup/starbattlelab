@@ -38,16 +38,19 @@ python3 -m pip install --force-reinstall --no-deps z3-solver==4.13.0.0
 | Generate only (append to `Main/puzzles/Files`) | `python3 -m MiscTools.generator.generate --sizes 4-14 --count 50` |
 | Render existing SBN(s) to PNG | `python3 -m MiscTools.generator.render --input <SBN-or-file-or-dir> --out out/png` |
 
-Common `batch` flags: `--sizes 5-9` / `7` / `6,8`, `--count N`, `--stars k` (default 1), `--out-root output`, `--date YYYY-MM-DD` (default today), `--workers 0` (=CPU), `--seed` (reproducible), `--max-attempts` (0=auto `count×5000`). Run any command with `--help` for the full list.
+Common `batch` flags: `--sizes 5-9` / `7` / `6,8`, `--count N`, `--strategy {all,random,progressive}` (default `all`), `--stars k` (default 1), `--out-root output`, `--date` (default today), `--workers 0` (=CPU), `--seed` (reproducible), `--max-attempts` (0=auto `count×5000`). Run any command with `--help`.
+
+Strategies: `random` (random carve), `progressive` (distinct/stepped region sizes — structured, normal yield), `all` (mix, maximizes variety). batch dedups by **canonical form** (rotations/mirrors count as the same shape), so saved puzzles are geometrically distinct.
 
 ## Output Structure (batch)
 
 ```
-output/<YYYY-MM-DD>/<size>x<size>/
+output/<YYYY-MM-DD>/<size>x<size>/<category>/
     ├── puzzles.txt     # one SBN per line (all unique-solution)
     └── <SBN>.png       # colored-region image per puzzle (filename = SBN)
+output/<YYYY-MM-DD>/<size>x<size>/manifest.csv   # sbn, category, symmetry, size_profile
 ```
-Re-running tops up the same folder (reads existing `puzzles.txt`, dedups, appends).
+`category` ∈ `symmetric-rot90/-rot180/-mirror` (rare), `progressive`, `distinct`, `uniform`, `plain`. Re-running tops up the same folders (canonical-dedup, appends).
 
 ## Validate a single puzzle
 

@@ -14,23 +14,34 @@ python3 -m pip install z3-solver tqdm Pillow
 > wheel 打包了错误的 arm64 二进制。若 `import z3` 报架构不匹配，改装 4.13.0.0：
 > `python3 -m pip install --force-reinstall --no-deps z3-solver==4.13.0.0`
 
-## 一键生成 + 验证 + 可视化（推荐，按日期/尺寸归档）
+## 一键生成 + 验证 + 可视化（推荐，按日期/尺寸/类目归档）
 
 ```bash
-# 尺寸 5-9，每个尺寸 10 个唯一解谜题，输出谜题 + 图片
+# 尺寸 5-9，每尺寸 10 个唯一解谜题；默认 --strategy all 混合多策略最大化多样性
 python3 -m MiscTools.generator.batch --sizes 5-9 --count 10
 ```
 
-输出结构：
+输出结构（按**类目**再分子目录）：
 
 ```
-output/<YYYY-MM-DD>/<size>x<size>/
-    ├── puzzles.txt     # 该尺寸全部 SBN（每行一个，均为唯一解）
-    └── <SBN>.png       # 每个谜题对应的彩色区域图片
+output/<YYYY-MM-DD>/<size>x<size>/<category>/
+    ├── puzzles.txt     # 该类目全部 SBN（均为唯一解）
+    └── <SBN>.png       # 每题彩色区域图片
+output/<YYYY-MM-DD>/<size>x<size>/manifest.csv   # SBN/类目/对称/大小分布 一览
 ```
 
-`batch` 参数同 `generate`，外加 `--out-root`（默认 `./output`）、`--date`（默认今天）、
-`--cell`（图片每格像素）。重复运行会读取已有 `puzzles.txt` 去重后续写。
+**类目（category）** 由几何与生成策略共同决定：
+`symmetric-rot90/-rot180/-mirror`（碰巧对称的，罕见）、`progressive`（大小等差递进）、
+`distinct`（大小各不相同）、`uniform`（大小全等）、`plain`（其余）。
+
+**多样性保证**：用规范形去重（旋转/镜像/改号视为同一形状），保证存下的每个谜题都是
+几何上独一无二的，不会出现互为镜像的重复。
+
+`batch` 参数：`--strategy {all,random,progressive}`（默认 all）、`--out-root`（默认 `./output`）、
+`--date`（默认今天）、`--cell`（图片每格像素），其余同 `generate`。重复运行去重后续写。
+
+> 生成策略：`random`（多源随机划分）、`progressive`（区域大小互不相同/递进，结构化且唯一解
+> 命中率正常）。曾试过 `staircase`（带状），但带状区域几乎不产唯一解（6x6 起→0），已移除。
 
 ## 仅生成谜题（追加到 Main/puzzles/Files）
 
@@ -77,12 +88,16 @@ python3 -m MiscTools.generator.render --input Main/puzzles/Files --out out/png
 
 ```
 generator/
-├── sbn_codec.py        # 共享 codec：encode_sbn / decode_sbn + SBN 常量
+├── sbn_codec.py        # 共享 codec：encode_sbn / decode_sbn + SBN 常量（4-14）
+├── canonical.py        # 规范形去重：旋转/镜像/改号下的不变指纹
+├── classify.py         # 区域分类：对称性 / 大小分布 -> 类目
 ├── strategies/
 │   ├── base.py         # GenerationStrategy 抽象接口
-│   └── random_carve.py # 策略 A：多源随机 BFS 区域划分
+│   ├── random_carve.py # 策略：多源随机 BFS 区域划分
+│   └── progressive.py  # 策略：区域大小互不相同（赤字驱动生长）
 ├── uniqueness.py       # is_unique()：封装 Z3 求解器
-├── generate.py         # 生成 CLI 主入口
+├── generate.py         # 仅生成 CLI（写 Main/puzzles/Files）
+├── batch.py            # 一键 生成+验证+渲染，按类目归档 + manifest
 └── render.py           # 渲染 CLI 工具
 ```
 

@@ -30,8 +30,8 @@ from .render import render_sbn
 from .sbn_codec import decode_sbn, DIM_TO_SBN_CODE_MAP
 from .strategies import STRATEGIES
 
-STRUCTURED = ('progressive', 'staircase')
-ALL_STRATEGIES = ['random', 'progressive', 'staircase']
+STRUCTURED = ('progressive',)
+ALL_STRATEGIES = ['random', 'progressive']
 
 
 def folder_category(grid, strategy_name):

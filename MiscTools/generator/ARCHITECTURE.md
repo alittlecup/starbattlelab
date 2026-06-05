@@ -65,12 +65,21 @@ strategies/__init__.py    STRATEGIES 注册表 + get_strategy(name)
 
 | 文件 | 职责 | 改动时注意 |
 |---|---|---|
-| `sbn_codec.py` | encode/decode + 常量 | encode 移植自 `LegacyImplementations/API-main/backend/puzzle_handler.py`，**改了要保证与现有文件格式一致**（水平边界逐列存储） |
-| `strategies/base.py` | 抽象接口 | 改接口签名会波及所有策略 |
-| `strategies/random_carve.py` | 策略 A | frontier 用 swap-pop 做 O(1) 随机取；返回 None 表示该次失败 |
+| `sbn_codec.py` | encode/decode + 常量（4-14） | encode 移植自 `LegacyImplementations/API-main/backend/puzzle_handler.py`，**改了要保证与现有文件格式一致**（水平边界逐列存储）。`'44':4` 是扩展，主站读不了 |
+| `canonical.py` | 规范形指纹 | 8 种二面体对称 + 区域改号下不变；用于「真正不同形状」去重，也被 classify 复用 |
+| `classify.py` | 分类/打标签 | `detect_symmetry`/`size_profile`/`category`，纯几何判断 |
+| `strategies/base.py` | 抽象接口 | 改接口签名会波及所有策略；`generate()` 返回纯数据（spawn 可 pickle）|
+| `strategies/random_carve.py` | 策略：随机划分 | frontier 用 swap-pop 做 O(1) 随机取；返回 None 表示该次失败 |
+| `strategies/progressive.py` | 策略：大小递进 | **赤字驱动生长**（每步扩张离目标最远的区域）保证铺满；内部重试到大小互不相同。**别改回「精确目标停长」——那样会孤立格子、近 100% 失败** |
 | `uniqueness.py` | `is_unique()` | 复用 `MiscTools/Z3Solver.py` 的 `Z3StarBattleSolver.solve()`（最多返回 2 解）；静音了它的 print |
-| `generate.py` | 生成 CLI + 并行 + 写文件 | 入口有 `if __name__=='__main__'` 守卫（spawn 必需）；按尺寸用不相交种子区间 |
+| `generate.py` | 仅生成 CLI + 并行核心 | `_attempt` 返回 `(sbn, 策略名)`；`generate_unique` 支持多策略轮转 + `key_fn` 自定义去重键；spawn 守卫；尺寸用不相交种子区间 |
+| `batch.py` | 编排：生成+验证+渲染 | 规范形去重 + 按 `folder_category` 分类目 + 写 manifest.csv |
 | `render.py` | 渲染 CLI | 纯 Pillow，无浏览器；颜色用 HSV 均匀取色 |
+
+### 已试过但移除的策略
+- **staircase（楼梯/带状）**：蛇形哈密顿路径切带。实测唯一解命中率 5x5≈8.7%、6x6=1/2000、
+  7x7+ = 0。带状区域几乎不额外约束（≈行约束）→ 多解。**结论：带状/高对称布局与唯一解天生冲突**，
+  已移除。要做结构化优先保 progressive（大小递进，不对称，命中率正常）。
 
 ## 6. 坑 / 注意事项
 
@@ -81,7 +90,10 @@ strategies/__init__.py    STRATEGIES 注册表 + get_strategy(name)
 2. **`Z3Solver.solve()` 会 print 计时**——批量场景很吵，`uniqueness._silenced()` 已重定向 stdout 屏蔽。
 3. **`SBNBatchValidator.py` 会在 cwd 生成 `found_puzzles.txt`** 做去重缓存，跑完记得清理，别误提交。
 4. **大尺寸慢且命中率低**：12-14、k=1 时随机策略可能跑很久。用 `--max-attempts` 兜底，或上策略 B。
-5. **去重只做精确字符串匹配**，不做同构（旋转/镜像）去重。需要的话复用 `MiscTools/puzzle_variator.py`。
+5. **两种去重键**：`generate.py` CLI 默认按 SBN 串精确去重；`batch.py` 用 `canonical.canonical_key`
+   做同构（旋转/镜像）去重，保证形状真正不同。`generate_unique(key_fn=...)` 可切换。
+6. **对称 ⟂ 唯一解**：整体对称的区域布局通常有成对的对称解 → 不唯一。所以 `symmetric-*` 类目极稀有
+   （靠碰），且不要做「强制对称」策略指望高产量。
 
 ## 7. 如何验证改动没坏
 

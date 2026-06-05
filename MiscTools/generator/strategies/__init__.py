@@ -7,13 +7,12 @@
 from .base import GenerationStrategy
 from .random_carve import RandomCarveStrategy
 from .progressive import ProgressiveStrategy
-from .staircase import StaircaseStrategy
 
 # 策略注册表：CLI 通过 --strategy <name> 选择。新增策略在此登记即可。
+# 注：曾试过 staircase（楼梯/带状），但带状区域几乎不产唯一解（6x6 起命中率→0），已移除。
 STRATEGIES = {
     'random': RandomCarveStrategy,
     'progressive': ProgressiveStrategy,
-    'staircase': StaircaseStrategy,
 }
 
 
