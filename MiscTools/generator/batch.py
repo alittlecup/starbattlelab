@@ -32,14 +32,17 @@ from .strategies import STRATEGIES
 
 STRUCTURED = ('progressive',)
 ALL_STRATEGIES = ['random', 'progressive']
+SHAPE_STRATEGIES = sorted(s for s in STRATEGIES if s.startswith('shape-'))
 
 
 def folder_category(grid, strategy_name):
-    """归档类目：对称布局最优先，其次生成它的结构化策略名，最后按几何大小分布。"""
+    """归档类目：图案 > 对称布局 > 结构化策略名 > 几何大小分布。"""
+    if strategy_name.startswith('shape-'):
+        return strategy_name                  # shape-heart / shape-cross / ...
     if detect_symmetry(grid):
         return geom_category(grid)            # symmetric-rot90 / -rot180 / -mirror
     if strategy_name in STRUCTURED:
-        return strategy_name                  # staircase / progressive
+        return strategy_name                  # progressive
     label = size_profile(grid)[1]             # uniform / progressive / distinct / mixed
     return label if label in ('uniform', 'progressive', 'distinct') else 'plain'
 
@@ -126,8 +129,8 @@ def main(argv=None):
     parser.add_argument("--count", type=int, default=10, help="每个尺寸目标数量（默认 10）")
     parser.add_argument("--stars", type=int, default=1, help="每区星数 k（默认 1）")
     parser.add_argument("--strategy", default="all",
-                        choices=sorted(STRATEGIES) + ["all"],
-                        help="生成策略，all=混合 random/progressive/staircase（默认 all）")
+                        choices=sorted(STRATEGIES) + ["all", "shapes"],
+                        help="生成策略，all=random+progressive，shapes=全部 shape-* 图案（默认 all）")
     parser.add_argument("--out-root", default="output", help="归档根目录（默认 ./output）")
     parser.add_argument("--date", default="", help="日期子目录名，默认今天 YYYY-MM-DD")
     parser.add_argument("--cell", type=int, default=48, help="图片每格像素（默认 48）")
@@ -139,7 +142,12 @@ def main(argv=None):
     workers = args.workers or os.cpu_count() or 1
     base_seed = args.seed or random.SystemRandom().randrange(2**31)
     date_str = args.date or datetime.date.today().isoformat()
-    strategies = ALL_STRATEGIES if args.strategy == "all" else [args.strategy]
+    if args.strategy == "all":
+        strategies = ALL_STRATEGIES
+    elif args.strategy == "shapes":
+        strategies = SHAPE_STRATEGIES
+    else:
+        strategies = [args.strategy]
     sizes = parse_sizes(args.sizes)
 
     total = 0
