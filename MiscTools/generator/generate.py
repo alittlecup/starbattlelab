@@ -29,7 +29,7 @@ DEFAULT_OUT_DIR = os.path.join(
 
 
 def _attempt(task):
-    """单次尝试：生成候选 -> 校验唯一 -> 返回 SBN 或 None。供 worker 进程调用。"""
+    """单次尝试：生成候选 -> 校验唯一 -> 返回 (SBN, 策略名) 或 None。供 worker 进程调用。"""
     size, stars, strategy_name, seed = task
     rng = random.Random(seed)
     strategy = get_strategy(strategy_name)
@@ -38,7 +38,7 @@ def _attempt(task):
         return None
     if not is_unique(grid, stars):
         return None
-    return encode_sbn(grid, stars)
+    return encode_sbn(grid, stars), strategy_name
 
 
 def parse_sizes(spec):
@@ -62,18 +62,22 @@ def load_existing(path):
         return {line.strip() for line in f if line.strip()}
 
 
-def generate_unique(size, stars, count, strategy_name, max_attempts,
-                    workers, base_seed, seen=None, on_found=None):
+def generate_unique(size, stars, count, strategy, max_attempts,
+                    workers, base_seed, seen=None, on_found=None, key_fn=None):
     """为单个尺寸生成至多 count 个唯一解谜题，返回新 SBN 列表。
 
     纯生成核心，不做文件 I/O —— 调用方负责持久化（generate.py 写 txt，
     batch.py 写归档目录 + 渲染）。
 
-    :param set seen: 已知 SBN 集合（跨运行去重），会被原地更新。
-    :param callable on_found: 每产出一个新 SBN 时回调 on_found(sbn)，可用于流式写/渲染。
+    :param strategy: 策略名(str) 或 策略名列表(list)。给列表时按任务轮转，混合多策略。
+    :param set seen: 已知去重键集合（跨运行去重），会被原地更新。
+    :param callable on_found: 每产出一个新 SBN 时回调 on_found(sbn)。
+    :param callable key_fn: SBN -> 去重键。默认按 SBN 串去重；batch 传入规范形去重。
     :returns: (新增 SBN 列表, 尝试次数)
     """
     seen = seen if seen is not None else set()
+    key_fn = key_fn or (lambda sbn: sbn)
+    strategies = [strategy] if isinstance(strategy, str) else list(strategy)
     results = []
     attempts = 0
     pool = mp.Pool(processes=workers)
@@ -81,15 +85,20 @@ def generate_unique(size, stars, count, strategy_name, max_attempts,
         seed_counter = base_seed
         while len(results) < count and attempts < max_attempts:
             batch = min(workers * 8, max_attempts - attempts)
-            tasks = [(size, stars, strategy_name, seed_counter + i) for i in range(batch)]
+            tasks = [(size, stars, strategies[(seed_counter + i) % len(strategies)],
+                      seed_counter + i) for i in range(batch)]
             seed_counter += batch
             attempts += batch
-            for sbn in pool.imap_unordered(_attempt, tasks):
-                if sbn and sbn not in seen:
-                    seen.add(sbn)
+            for res in pool.imap_unordered(_attempt, tasks):
+                if not res:
+                    continue
+                sbn, strat = res
+                key = key_fn(sbn)
+                if key not in seen:
+                    seen.add(key)
                     results.append(sbn)
                     if on_found:
-                        on_found(sbn)
+                        on_found(sbn, strat)
                     if len(results) >= count:
                         break
     finally:
@@ -114,7 +123,7 @@ def generate_for_size(size, stars, count, strategy_name, out_dir,
     os.makedirs(out_dir, exist_ok=True)
     out = open(path, "a", encoding="utf-8")
     try:
-        def _write(sbn):
+        def _write(sbn, strat):
             out.write(sbn + "\n")
             out.flush()
         results, attempts = generate_unique(
