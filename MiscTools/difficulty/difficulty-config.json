@@ -17,6 +17,7 @@
     "finned_fish": { "lo": 800, "hi": 910 },
     "by_a_thread": { "lo": 860, "hi": 940 },
     "at_sea": { "lo": 890, "hi": 970 },
-    "thread_at_sea": { "lo": 950, "hi": 1000 }
+    "thread_at_sea": { "lo": 950, "hi": 1000 },
+    "guessing": { "lo": 600, "w_guess": 5, "w_depth": 20 }
   }
 }

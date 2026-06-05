@@ -13,6 +13,7 @@ CONFIG = {
         "row_col_complete": {"lo": 1, "hi": 11},
         "region_confined": {"lo": 40, "hi": 250},
         "exclusion": {"lo": 100, "hi": 300},
+        "guessing": {"lo": 600, "w_guess": 5, "w_depth": 20},
     },
 }
 
@@ -53,6 +54,14 @@ class TestScorer(unittest.TestCase):
                 step("exclusion", {"candidate_count": 7})])
         self.assertEqual(t["hardest_rule"], "exclusion")
         self.assertAlmostEqual(t["score"], 300)
+
+    def test_guessing_score_is_lo_plus_bonuses(self):
+        t = sc([step("guessing", {"guesses": 3, "depth": 2})])
+        self.assertEqual(t["band"], "Expert")
+        self.assertEqual(t["score"], 600 + 5 * 3 + 20 * 2)   # 655
+        # 搜索越多/越深，分越高
+        more = sc([step("guessing", {"guesses": 8, "depth": 4})])
+        self.assertGreater(more["score"], t["score"])
 
     def test_band_from_category(self):
         self.assertEqual(sc([step("row_col_complete")])["band"], "Easy")

@@ -63,6 +63,17 @@ class CandidateState:
     def set_cell(self, r, c, state):
         self.grid[r][c] = state
 
+    def copy(self):
+        """浅复制：grid 深拷贝，region_grid/region_cells 只读共享。供回溯搜索分支用。"""
+        new = CandidateState.__new__(CandidateState)
+        new.region_grid = self.region_grid
+        new.dim = self.dim
+        new.stars = self.stars
+        new.grid = [row[:] for row in self.grid]
+        new.invalid = self.invalid
+        new.region_cells = self.region_cells
+        return new
+
     def apply(self, deduction):
         for (r, c, state) in deduction.marks:
             cur = self.grid[r][c]

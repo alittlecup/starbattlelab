@@ -22,8 +22,10 @@ RULE_CATEGORY = {
     "pressured_excl": "adv", "finned_counts": "adv", "set_diff": "adv",
     "fish": "adv", "finned_fish": "adv",
     "by_a_thread": "uniq", "at_sea": "uniq", "thread_at_sea": "uniq",
+    "guessing": "search",
 }
-CATEGORY_BAND = {"basic": "Easy", "geo": "Medium", "adv": "Hard", "uniq": "VeryHard"}
+CATEGORY_BAND = {"basic": "Easy", "geo": "Medium", "adv": "Hard",
+                 "uniq": "VeryHard", "search": "Expert"}
 UNSOLVED_BAND = "Expert"
 
 DEFAULT_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "difficulty-config.json")
@@ -36,10 +38,19 @@ def load_config(path=None):
 
 
 def _rule_value(config, rule_id, meta):
-    """规则在难度轴上的具体值 = lo + complexity(因子) × (hi − lo)；未配置则返回 None。"""
+    """规则在难度轴上的具体值；未配置则返回 None。
+
+    一般规则：value = lo + complexity(因子) × (hi − lo)。
+    搜索兜底 guessing：value = lo + w_guess × guesses + w_depth × depth（开放上限）。
+    """
     r = config.get("rules", {}).get(rule_id)
     if not r:
         return None
+    if rule_id == "guessing":
+        lo = r.get("lo", 600)
+        wg = r.get("w_guess", 5)
+        wd = r.get("w_depth", 20)
+        return lo + wg * meta.get("guesses", 0) + wd * meta.get("depth", 0)
     return r["lo"] + complexity(rule_id, meta) * (r["hi"] - r["lo"])
 
 
