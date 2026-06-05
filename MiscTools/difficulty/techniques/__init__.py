@@ -9,6 +9,7 @@ from techniques.t1_basic import (
 )
 from techniques.t2_geometry import region_confined_to_line, exclusion
 from techniques.t2_counting import undercounting, overcounting
+from techniques.t3_fish import fish
 
 ALL_TECHNIQUES = [
     line_complete,            # tier 1
@@ -20,4 +21,5 @@ ALL_TECHNIQUES = [
     exclusion,                # tier 7
     undercounting,            # tier 8
     overcounting,             # tier 9
+    fish,                     # tier 13（规则 13；10–12 暂未实现）
 ]
