@@ -28,26 +28,24 @@ def _Tshape(n):
     m = n // 2
     return {(0, c) for c in range(n)} | {(r, m) for r in range(n)}
 
-def _mask5(rows):
-    return lambda n: ({(r, c) for r in range(5) for c in range(5) if rows[r][c] == "1"}
-                      if n == 5 else None)
+def _grid_mask(patterns):
+    """patterns: {n: [行字符串]}，按尺寸取对应手工图案；无该尺寸返回 None。"""
+    def fn(n):
+        rows = patterns.get(n)
+        if rows is None:
+            return None
+        return {(r, c) for r in range(n) for c in range(n) if rows[r][c] == "1"}
+    return fn
 
-# 5x5 手工图案（互补区分量 ≤4 才可行）
-_heart = _mask5([
-    "00000",
-    "01010",
-    "11111",
-    "01110",
-    "00100",
-])
+_heart = _grid_mask({
+    5: ["00000", "01010", "11111", "01110", "00100"],
+    6: ["000000", "010010", "111111", "011110", "001100", "000000"],
+})
 _corner = lambda n: {(r, c) for r in range(n // 2 + 1) for c in range(n // 2 + 1)}  # 角上方块
-_zigzag = _mask5([
-    "11100",
-    "00100",
-    "00100",
-    "00111",
-    "00000",
-])
+_zigzag = _grid_mask({
+    5: ["11100", "00100", "00100", "00111", "00000"],
+    6: ["111000", "001000", "001100", "000100", "000111", "000000"],
+})
 
 
 TEMPLATES = {
