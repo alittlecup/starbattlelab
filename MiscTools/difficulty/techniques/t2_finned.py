@@ -1,12 +1,14 @@
 """规则 11：带鳍计数（Finned Counts）。限 stars == 1。
 
-当前实现**带鳍欠计数（单鳍线）**：
-k 个区域的候选几乎落在 k 条线内，只多出一条"鳍线"f。分两种情况——
+**带鳍欠计数（单鳍线）**：k 个区域候选几乎落在 k 条线内，只多出一条鳍线 f。
 - 鳍线上无星 → 退化为干净欠计数，其消除（base k 线里其它区域的格）成立；
-- 鳍线上某格为星 → 该鳍格的邻格被消除。
-两种情况都被消除的 = （干净欠计数消除集）∩（所有鳍格的公共邻格），安全打叉。
+- 鳍线上某格为星 → 该鳍格邻格被消除。
+安全消除 = （干净欠计数消除集）∩（所有鳍格的公共邻格）。
 
-对偶的"带鳍过计数"逻辑更复杂，暂未实现。
+**带鳍过计数（单鳍区域，对偶）**：k 条线候选几乎落在 k 个区域内，只多出一个鳍区域 g。
+- 鳍区域在这 k 线内无星 → 退化为干净过计数，其消除（base k 区域在 k 线外的格）成立；
+- 鳍区域某格为星 → 该鳍格邻格被消除。
+安全消除 = （干净过计数消除集）∩（所有鳍格的公共邻格）。
 """
 
 from itertools import combinations
@@ -58,7 +60,55 @@ def _finned_under(state, regions, rids, k, axis):
                 return Deduction("finned_counts", 11, marks,
                                  "带鳍欠计数：干净欠计数消除集 ∩ 鳍邻格",
                                  rule_id="finned_counts",
-                                 meta={"axis": axis, "k": k, "fin": len(fin_cells)})
+                                 meta={"axis": axis, "k": k, "fin": len(fin_cells),
+                                       "dir": "under"})
+    return None
+
+
+def _finned_over(state, k, axis):
+    line_cells = {}
+    for idx in range(state.dim):
+        unk = state.unknowns(state.cells_of_line(axis, idx))
+        if unk:
+            line_cells[idx] = unk
+    for combo in combinations(line_cells.keys(), k):
+        region_cells_in = {}                 # rid -> 在这 k 条线上的候选格
+        for idx in combo:
+            for (r, c) in line_cells[idx]:
+                region_cells_in.setdefault(state.region_grid[r][c], []).append((r, c))
+        if len(region_cells_in) != k + 1:    # 只处理"恰好多出一个鳍区域"
+            continue
+        combo_lines = set(combo)
+        for g in list(region_cells_in.keys()):
+            base_regions = [rid for rid in region_cells_in if rid != g]
+            fin_cells = region_cells_in[g]
+            covered_lines = set()            # 每条 combo 线都有 base 区域候选？
+            for rid in base_regions:
+                for (r, c) in region_cells_in[rid]:
+                    covered_lines.add(r if axis == "row" else c)
+            if len(covered_lines) != k:
+                continue
+            clean = set()                    # 干净过计数会消除的格：base 区域在 k 线外的 UNKNOWN
+            for rid in base_regions:
+                for (r, c) in state.unknowns(state.cells_of_region(rid)):
+                    if (r if axis == "row" else c) not in combo_lines:
+                        clean.add((r, c))
+            if not clean:
+                continue
+            common_nb = None
+            for (fr, fc) in fin_cells:
+                nb = set(state.neighbors(fr, fc))
+                common_nb = nb if common_nb is None else (common_nb & nb)
+            if not common_nb:
+                continue
+            marks = [(r, c, ELIMINATED) for (r, c) in (clean & common_nb)
+                     if state.grid[r][c] == UNKNOWN]
+            if marks:
+                return Deduction("finned_counts", 11, marks,
+                                 "带鳍过计数：干净过计数消除集 ∩ 鳍邻格",
+                                 rule_id="finned_counts",
+                                 meta={"axis": axis, "k": k, "fin": len(fin_cells),
+                                       "dir": "over"})
     return None
 
 
@@ -75,6 +125,10 @@ def finned_counts(state):
     for k in range(2, MAX_K + 1):
         for axis in ("row", "col"):
             d = _finned_under(state, regions, rids, k, axis)
+            if d is not None:
+                return d
+        for axis in ("row", "col"):
+            d = _finned_over(state, k, axis)
             if d is not None:
                 return d
     return None
