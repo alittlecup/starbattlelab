@@ -40,6 +40,10 @@ def complexity(rule_id, meta):
         # k 越大越难；行/列默认相同，不影响。（带鳍计数同样以 k 为主因子。）
         return _norm(meta.get("k", 2))
 
+    if rule_id == "set_diff":
+        # 参与的线数 m 越多越难。
+        return _norm(meta.get("m", 2))
+
     if rule_id in ("fish", "finned_fish"):
         # 鱼规模 n 越大越难（带鳍鱼将来可叠加鳍项）。
         return _norm(meta.get("n", 2))

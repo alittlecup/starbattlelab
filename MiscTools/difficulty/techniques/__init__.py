@@ -10,6 +10,7 @@ from techniques.t1_basic import (
 from techniques.t2_geometry import region_confined_to_line, exclusion
 from techniques.t2_counting import undercounting, overcounting
 from techniques.t2_finned import finned_counts
+from techniques.t2_setdiff import set_differentials
 from techniques.t3_fish import fish
 
 ALL_TECHNIQUES = [
@@ -22,6 +23,7 @@ ALL_TECHNIQUES = [
     exclusion,                # tier 7
     undercounting,            # tier 8
     overcounting,             # tier 9
-    finned_counts,            # tier 11（规则 11；带鳍欠计数）
+    finned_counts,            # tier 11（规则 11；带鳍计数）
+    set_differentials,        # tier 12（规则 12；集合差分）
     fish,                     # tier 13（规则 13）
 ]
