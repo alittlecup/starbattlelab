@@ -16,9 +16,11 @@ SBN_B64_ALPHABET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwx
 SBN_CHAR_TO_INT = {c: i for i, c in enumerate(SBN_B64_ALPHABET)}
 SBN_INT_TO_CHAR = {i: c for i, c in enumerate(SBN_B64_ALPHABET)}
 SBN_CODE_TO_DIM_MAP = {
+    # 本生成器支持范围 4-14。'44':4 是对官方格式的扩展（官方 constants.js 从 5 起，
+    # 读不了 4x4 SBN）。官方格式本身可到 25，但本模块只覆盖 4-14。
+    '44': 4,
     '55': 5,  '66': 6,  '77': 7,  '88': 8,  '99': 9, 'AA': 10, 'BB': 11, 'CC': 12, 'DD': 13,
-    'EE': 14, 'FF': 15, 'GG': 16, 'HH': 17, 'II': 18, 'JJ': 19, 'KK': 20, 'LL': 21, 'MM': 22,
-    'NN': 23, 'OO': 24, 'PP': 25,
+    'EE': 14,
 }
 DIM_TO_SBN_CODE_MAP = {v: k for k, v in SBN_CODE_TO_DIM_MAP.items()}
 

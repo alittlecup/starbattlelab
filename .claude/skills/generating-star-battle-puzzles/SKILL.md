@@ -11,7 +11,7 @@ The `starbattlelab.github.io` repo ships a generator at `MiscTools/generator/` t
 
 ## When to Use
 
-- Batch-generating new Star Battle puzzles (sizes 5–14, k=1 default)
+- Batch-generating new Star Battle puzzles (sizes 4–14, k=1 default)
 - Checking whether a puzzle (SBN string) has a unique solution
 - Producing PNG images of puzzles with colored regions
 
@@ -63,7 +63,7 @@ Strongest cross-check (independent code path): `python3 MiscTools/SBNBatchValida
 
 - **Running from a subdirectory** → `ModuleNotFoundError: MiscTools`. Run from repo root.
 - **Large sizes hang / fall short of `--count`**: random strategy hit-rate is very low at ≥12, k=1. Cap with `--max-attempts` or generate fewer; a higher-yield strategy is future work (see `MiscTools/generator/ARCHITECTURE.md`).
-- **Expecting sizes <5 or >25**: SBN codec only supports 5–25; others are skipped.
+- **Expecting sizes <4 or >14**: this generator supports 4–14 only; others are skipped. (4x4 is a custom extension; official web app reads 5+ and can't load 4x4 SBNs.)
 - **`output/` is not gitignored** — don't accidentally commit generated artifacts.
 
 Adding a new generation strategy: see `MiscTools/generator/ARCHITECTURE.md` §4.

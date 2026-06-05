@@ -27,7 +27,7 @@ def run_size(size, stars, count, strategy_name, out_root, date_str,
              max_attempts, workers, base_seed, cell):
     """生成单个尺寸并写入归档目录，返回实际产出数量。"""
     if size not in DIM_TO_SBN_CODE_MAP:
-        print(f"[skip] size {size} 不在 SBN 支持范围 (5-25)")
+        print(f"[skip] size {size} 不在支持范围 (4-14)")
         return 0
 
     size_dir = os.path.join(out_root, date_str, f"{size}x{size}")

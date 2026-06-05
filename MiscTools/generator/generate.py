@@ -102,7 +102,7 @@ def generate_for_size(size, stars, count, strategy_name, out_dir,
                       max_attempts, workers, base_seed):
     """为单个尺寸生成 count 个唯一解谜题，增量追加写入 {size}-{stars}-unsorted.txt。"""
     if size not in DIM_TO_SBN_CODE_MAP:
-        print(f"[skip] size {size} 不在 SBN 支持范围 (5-25)", file=sys.stderr)
+        print(f"[skip] size {size} 不在支持范围 (4-14)", file=sys.stderr)
         return 0
 
     path = os.path.join(out_dir, f"{size}-{stars}-unsorted.txt")
