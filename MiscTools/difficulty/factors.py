@@ -36,8 +36,8 @@ def complexity(rule_id, meta):
         # 被威胁区域的候选数越多越难（候选都挤在公共邻格附近，跨度变化小，仅用数量）。
         return _norm(meta.get("candidate_count", 2))
 
-    if rule_id in ("undercounting", "overcounting"):
-        # k 越大越难；行/列默认相同，不影响。
+    if rule_id in ("undercounting", "overcounting", "finned_counts"):
+        # k 越大越难；行/列默认相同，不影响。（带鳍计数同样以 k 为主因子。）
         return _norm(meta.get("k", 2))
 
     if rule_id in ("fish", "finned_fish"):
