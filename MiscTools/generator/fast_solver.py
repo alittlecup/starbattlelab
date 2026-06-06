@@ -57,3 +57,45 @@ def count_solutions(region_grid, limit=2):
 def is_unique_fast(region_grid):
     """k=1 是否恰好唯一解。"""
     return count_solutions(region_grid, 2) == 1
+
+
+def find_solutions(region_grid, limit=2):
+    """返回至多 limit 个解，每个解是「各行星所在列」的元组。供精修取反例用。"""
+    n = len(region_grid)
+    ids = {}
+    reg = [[0] * n for _ in range(n)]
+    for r in range(n):
+        for c in range(n):
+            rid = region_grid[r][c]
+            idx = ids.get(rid)
+            if idx is None:
+                idx = len(ids)
+                ids[rid] = idx
+            reg[r][c] = idx
+    if len(ids) != n:
+        return []
+    regbit = [[1 << reg[r][c] for c in range(n)] for r in range(n)]
+    sols = []
+    cur = [0] * n
+
+    def dfs(r, used_cols, used_regs, prev_c):
+        if r == n:
+            sols.append(tuple(cur))
+            return
+        rb = regbit[r]
+        for c in range(n):
+            bit = 1 << c
+            if used_cols & bit:
+                continue
+            if r > 0 and -2 < c - prev_c < 2:
+                continue
+            rbit = rb[c]
+            if used_regs & rbit:
+                continue
+            cur[r] = c
+            dfs(r + 1, used_cols | bit, used_regs | rbit, c)
+            if len(sols) >= limit:
+                return
+
+    dfs(0, 0, 0, -99)
+    return sols
