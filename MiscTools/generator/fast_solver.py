@@ -1,56 +1,66 @@
 """Star Battle 专用快速解计数器（仅 k=1），用于生成时快速筛唯一解。
 
-k=1 时一个解 = 每行选一列放星，满足：列互不相同、每区域恰好一颗、
-相邻行的列号差 ≥2（即不相邻，含对角）。按行 DFS + 位掩码剪枝，
-数到 limit 个解即停 —— 比通用 Z3 求解快 1~2 个数量级。
-
-仅处理 k=1；其它星数请用 Z3（见 uniqueness.py 的路由）。
+按「区域、最小区域优先(MRV)」DFS：每个区域恰好放一颗星，
+小区域候选少 → 分支因子低、剪枝层层级联，证明唯一性极快。
+约束：每行/列至多一颗星，星之间 8 邻接不相邻。
+数到 limit 个解即停。仅 k=1；其它星数用 Z3（见 uniqueness.py）。
 """
+
+
+def _regions_by_size(region_grid):
+    """返回 (n, 按格子数升序排列的区域格子列表)；区域数 != n 时返回 None。"""
+    n = len(region_grid)
+    regions = {}
+    for r in range(n):
+        row = region_grid[r]
+        for c in range(n):
+            regions.setdefault(row[c], []).append((r, c))
+    if len(regions) != n:
+        return None
+    return n, sorted(regions.values(), key=len)
 
 
 def count_solutions(region_grid, limit=2):
     """统计 k=1 解的数量，最多数到 limit 个即停。"""
-    n = len(region_grid)
-    # 区域 id -> 0..m-1 位索引
-    ids = {}
-    reg = [[0] * n for _ in range(n)]
-    for r in range(n):
-        row = region_grid[r]
-        rr = reg[r]
-        for c in range(n):
-            rid = row[c]
-            idx = ids.get(rid)
-            if idx is None:
-                idx = len(ids)
-                ids[rid] = idx
-            rr[c] = idx
-    if len(ids) != n:
-        return 0  # 区域数 != n，k=1 不可能每行/列/区域各一星
-
-    # 预存每行每列的区域位
-    regbit = [[1 << reg[r][c] for c in range(n)] for r in range(n)]
+    prep = _regions_by_size(region_grid)
+    if prep is None:
+        return 0
+    n, order = prep
+    occ = [[False] * n for _ in range(n)]   # 星占用网格，用于 O(1) 邻接检查
     count = 0
 
-    def dfs(r, used_cols, used_regs, prev_c):
+    def adj(r, c):
+        for dr in (-1, 0, 1):
+            rr = r + dr
+            if 0 <= rr < n:
+                orow = occ[rr]
+                for dc in (-1, 0, 1):
+                    cc = c + dc
+                    if 0 <= cc < n and orow[cc]:
+                        return True
+        return False
+
+    def dfs(i, used_row, used_col):
         nonlocal count
-        if r == n:
+        if i == n:
             count += 1
             return
-        rb = regbit[r]
-        for c in range(n):
-            bit = 1 << c
-            if used_cols & bit:
+        for (r, c) in order[i]:
+            rb = 1 << r
+            if used_row & rb:
                 continue
-            if r > 0 and -2 < c - prev_c < 2:   # 与上一行相邻（含对角/同列）
+            cb = 1 << c
+            if used_col & cb:
                 continue
-            rbit = rb[c]
-            if used_regs & rbit:
+            if adj(r, c):
                 continue
-            dfs(r + 1, used_cols | bit, used_regs | rbit, c)
+            occ[r][c] = True
+            dfs(i + 1, used_row | rb, used_col | cb)
+            occ[r][c] = False
             if count >= limit:
                 return
 
-    dfs(0, 0, 0, -99)
+    dfs(0, 0, 0)
     return count
 
 
@@ -61,41 +71,44 @@ def is_unique_fast(region_grid):
 
 def find_solutions(region_grid, limit=2):
     """返回至多 limit 个解，每个解是「各行星所在列」的元组。供精修取反例用。"""
-    n = len(region_grid)
-    ids = {}
-    reg = [[0] * n for _ in range(n)]
-    for r in range(n):
-        for c in range(n):
-            rid = region_grid[r][c]
-            idx = ids.get(rid)
-            if idx is None:
-                idx = len(ids)
-                ids[rid] = idx
-            reg[r][c] = idx
-    if len(ids) != n:
+    prep = _regions_by_size(region_grid)
+    if prep is None:
         return []
-    regbit = [[1 << reg[r][c] for c in range(n)] for r in range(n)]
+    n, order = prep
+    occ = [[False] * n for _ in range(n)]
+    cols = [0] * n          # cols[r] = 该行星所在列
     sols = []
-    cur = [0] * n
 
-    def dfs(r, used_cols, used_regs, prev_c):
-        if r == n:
-            sols.append(tuple(cur))
+    def adj(r, c):
+        for dr in (-1, 0, 1):
+            rr = r + dr
+            if 0 <= rr < n:
+                orow = occ[rr]
+                for dc in (-1, 0, 1):
+                    cc = c + dc
+                    if 0 <= cc < n and orow[cc]:
+                        return True
+        return False
+
+    def dfs(i, used_row, used_col):
+        if i == n:
+            sols.append(tuple(cols))
             return
-        rb = regbit[r]
-        for c in range(n):
-            bit = 1 << c
-            if used_cols & bit:
+        for (r, c) in order[i]:
+            rb = 1 << r
+            if used_row & rb:
                 continue
-            if r > 0 and -2 < c - prev_c < 2:
+            cb = 1 << c
+            if used_col & cb:
                 continue
-            rbit = rb[c]
-            if used_regs & rbit:
+            if adj(r, c):
                 continue
-            cur[r] = c
-            dfs(r + 1, used_cols | bit, used_regs | rbit, c)
+            occ[r][c] = True
+            cols[r] = c
+            dfs(i + 1, used_row | rb, used_col | cb)
+            occ[r][c] = False
             if len(sols) >= limit:
                 return
 
-    dfs(0, 0, 0, -99)
+    dfs(0, 0, 0)
     return sols
