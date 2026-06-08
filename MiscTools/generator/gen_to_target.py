@@ -15,11 +15,15 @@ def main(argv=None):
     p.add_argument("--size", type=int, default=5)
     p.add_argument("--target", type=int, default=10000)
     p.add_argument("--stars", type=int, default=1)
+    p.add_argument("--strategy", default="refine",
+                   help="生成策略（默认 refine，大尺寸高命中率）")
     p.add_argument("--out-root", default="output")
     p.add_argument("--date", default="2026-06-05")
     p.add_argument("--cell", type=int, default=48)
     p.add_argument("--workers", type=int, default=0)
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--max-attempts", type=int, default=0,
+                   help="尝试上限；0=自动(need*200)。大尺寸命中率低需调大")
     a = p.parse_args(argv)
 
     workers = a.workers or os.cpu_count() or 1
@@ -31,9 +35,9 @@ def main(argv=None):
     if need <= 0:
         print("已达标。", flush=True)
         return
-    # 余量足够大的尝试上限（5x5 布局池远大于 1 万，命中率约 16%）
-    max_attempts = need * 50
-    produced = run_size(a.size, a.stars, need, ALL_STRATEGIES, a.out_root, a.date,
+    strategies = ALL_STRATEGIES if a.strategy == "all" else [a.strategy]
+    max_attempts = a.max_attempts or need * 200
+    produced = run_size(a.size, a.stars, need, strategies, a.out_root, a.date,
                         max_attempts, workers, seed, a.cell)
     final = len(_load_seen(size_dir))
     print(f"新增 {produced}，当前总计 {final} / 目标 {a.target}", flush=True)
