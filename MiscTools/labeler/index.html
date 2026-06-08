@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Star Battle 谜题预览 / 难度标注</title>
+<style>
+  :root {
+    --bg: #0f1217;
+    --panel: #1a1f29;
+    --panel2: #232a36;
+    --border: #364152;
+    --text: #e5e9f0;
+    --muted: #94a3b8;
+    --accent: #6366f1;
+    --accent2: #22c55e;
+    --danger: #ef4444;
+    --gold: #f59e0b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    display: flex; min-height: 100vh;
+  }
+  .main { flex: 1; padding: 24px; display: flex; flex-direction: column; align-items: center; }
+  .sidebar { width: 320px; background: var(--panel); border-left: 1px solid var(--border);
+             padding: 20px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; }
+  h1 { font-size: 18px; margin: 0 0 16px; }
+  h2 { font-size: 14px; margin: 0 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+
+  /* 尺寸选择 */
+  .sizes { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+  .size-btn { padding: 6px 12px; background: var(--panel2); border: 1px solid var(--border);
+              color: var(--text); border-radius: 6px; cursor: pointer; font-size: 14px; }
+  .size-btn:hover:not(:disabled) { border-color: var(--accent); }
+  .size-btn.active { background: var(--accent); border-color: var(--accent); }
+  .size-btn:disabled { opacity: .3; cursor: not-allowed; }
+  .size-btn .cnt { font-size: 10px; color: var(--muted); display: block; }
+  .size-btn.active .cnt { color: #c7d2fe; }
+
+  /* 网格 */
+  #grid { display: grid; gap: 0; background: #0a0c10; border: 3px solid #0a0c10;
+          user-select: none; touch-action: none; }
+  .cell { position: relative; display: flex; align-items: center; justify-content: center;
+          cursor: pointer; font-weight: bold; color: #1a1a1a;
+          border: 1px solid rgba(0,0,0,.25); }
+  .cell.bt { border-top: 3px solid #0a0c10; }
+  .cell.bb { border-bottom: 3px solid #0a0c10; }
+  .cell.bl { border-left: 3px solid #0a0c10; }
+  .cell.br { border-right: 3px solid #0a0c10; }
+  .cell .mark { font-size: 60%; line-height: 1; pointer-events: none; }
+  .cell.star .mark { color: #111; text-shadow: 0 0 2px rgba(255,255,255,.6); }
+  .cell.bad { outline: 3px solid var(--danger); outline-offset: -3px; z-index: 2; }
+
+  .status { margin-top: 14px; font-size: 14px; min-height: 22px; }
+  .status.ok { color: var(--accent2); font-weight: bold; }
+  .status.warn { color: var(--gold); }
+
+  .sbn-line { font-family: ui-monospace, monospace; font-size: 12px; color: var(--muted);
+              word-break: break-all; margin-top: 8px; }
+
+  /* 难度卡片 */
+  .diff-card { background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+  .diff-score { font-size: 28px; font-weight: bold; }
+  .diff-row { display: flex; justify-content: space-between; font-size: 13px; margin-top: 4px; color: var(--muted); }
+  .diff-row b { color: var(--text); }
+  .band { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+  .band.Easy { background: #16a34a33; color: #4ade80; }
+  .band.Medium { background: #ca8a0433; color: #fbbf24; }
+  .band.Hard { background: #dc262633; color: #f87171; }
+  .band.Expert,.band.Ambiguous,.band.Broken { background: #7c3aed33; color: #c4b5fd; }
+
+  /* 预期分数 */
+  .score-input { display: flex; gap: 8px; align-items: center; }
+  .score-input input { flex: 1; padding: 8px; background: var(--panel2); border: 1px solid var(--border);
+                       color: var(--text); border-radius: 6px; font-size: 16px; }
+  .quick-bands { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .quick-bands button { flex: 1; padding: 6px 4px; background: var(--panel2); border: 1px solid var(--border);
+                        color: var(--text); border-radius: 6px; cursor: pointer; font-size: 12px; }
+  .quick-bands button:hover { border-color: var(--accent); }
+
+  /* 标记按钮 */
+  .marks { display: flex; gap: 8px; }
+  .mark-btn { flex: 1; padding: 12px 4px; background: var(--panel2); border: 1px solid var(--border);
+              color: var(--text); border-radius: 8px; cursor: pointer; font-size: 14px; text-align: center; }
+  .mark-btn:hover { border-color: var(--accent); }
+  .mark-btn .ico { font-size: 22px; display: block; margin-bottom: 4px; }
+  .mark-btn.on.fav { background: var(--gold); border-color: var(--gold); color: #1a1a1a; }
+  .mark-btn.on.special { background: var(--accent); border-color: var(--accent); }
+  .mark-btn.on.discard { background: var(--danger); border-color: var(--danger); }
+
+  .actions { display: flex; gap: 8px; }
+  .actions button { flex: 1; padding: 12px; border-radius: 8px; border: none; cursor: pointer;
+                    font-size: 15px; font-weight: bold; }
+  .btn-next { background: var(--accent2); color: #06240f; }
+  .btn-skip { background: var(--panel2); color: var(--text); border: 1px solid var(--border) !important; }
+
+  .stats { font-size: 12px; color: var(--muted); }
+  .io-btns { display: flex; gap: 8px; }
+  .io-btns button { flex: 1; padding: 8px; background: var(--panel2); border: 1px solid var(--border);
+                    color: var(--text); border-radius: 6px; cursor: pointer; font-size: 12px; }
+  .hint { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .saved-flash { color: var(--accent2); font-size: 12px; opacity: 0; transition: opacity .2s; }
+  .saved-flash.show { opacity: 1; }
+</style>
+</head>
+<body>
+  <div class="main">
+    <h1>Star Battle 谜题预览 / 难度标注</h1>
+    <div class="sizes" id="sizes"></div>
+    <div id="grid"></div>
+    <div class="status" id="status"></div>
+    <div class="sbn-line" id="sbnLine"></div>
+  </div>
+
+  <div class="sidebar">
+    <div>
+      <h2>算法难度分（运行时计算）</h2>
+      <div class="diff-card" id="diffCard">
+        <div class="diff-score" id="diffScore">—</div>
+        <div class="diff-row"><span>档位</span><span id="diffBand">—</span></div>
+        <div class="diff-row"><span>最难规则</span><b id="diffRule">—</b></div>
+        <div class="diff-row"><span>解法</span><b id="diffVia">—</b></div>
+        <div class="diff-row"><span>步数 / 解数</span><b id="diffSteps">—</b></div>
+      </div>
+    </div>
+
+    <div>
+      <h2>我的预期分数</h2>
+      <div class="score-input">
+        <input type="number" id="expScore" placeholder="输入分数" step="1">
+      </div>
+      <div class="quick-bands" id="quickBands">
+        <button data-v="15">Easy</button>
+        <button data-v="100">Medium</button>
+        <button data-v="300">Hard</button>
+        <button data-v="600">Expert</button>
+      </div>
+    </div>
+
+    <div>
+      <h2>标记</h2>
+      <div class="marks">
+        <div class="mark-btn fav" id="mkFav"><span class="ico">★</span>收藏</div>
+        <div class="mark-btn special" id="mkSpecial"><span class="ico">◆</span>特殊形状</div>
+        <div class="mark-btn discard" id="mkDiscard"><span class="ico">🗑</span>丢弃</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn-skip" id="btnSkip">跳过</button>
+      <button class="btn-next" id="btnNext">保存并下一题 →</button>
+    </div>
+    <div class="saved-flash" id="savedFlash">已保存 ✓</div>
+
+    <div>
+      <h2>统计</h2>
+      <div class="stats" id="stats"></div>
+    </div>
+
+    <div>
+      <h2>数据</h2>
+      <div class="io-btns">
+        <button id="btnExportJson">导出 JSON</button>
+        <button id="btnExportCsv">导出 CSV</button>
+        <button id="btnImport">导入</button>
+      </div>
+      <input type="file" id="importFile" accept=".json" style="display:none">
+    </div>
+
+    <div class="hint">
+      单击格子 = ✕排除，双击 = ★星（右键也可直接放/取星）。<br>
+      解对后自动保存并进入下一题。<br>
+      标记/预期分会随题目存到浏览器本地。
+    </div>
+  </div>
+
+  <script src="/MiscTools/labeler/app.js"></script>
+</body>
+</html>
